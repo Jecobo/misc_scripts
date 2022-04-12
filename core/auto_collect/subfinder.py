@@ -4,10 +4,16 @@
 
 from subprocess import PIPE, Popen
 from rich.console import Console
+import time
+from lib import config
+
+now_time = time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime())
+
 
 def run_subfinder():
     console = Console()
-    cmdx = 'nohup subfinder -silent -d sangfor.com.cn -o ~/sangfor.com.cn.txt 2>&1 &'
+    cmdx = 'nohup subfinder -silent -dL ' + config.domain_path + ' -o ./res/subdomain/' + now_time + ' 2>&1 &'
+    print(cmdx)
     try:
         proc = Popen(
             cmdx,
@@ -16,6 +22,6 @@ def run_subfinder():
             stderr=PIPE,  # 标准错误，保存到管道
             shell=True
         )
-        console.print("正在进行子域收集...", style="#ADFF2F")
+        console.print("正在进行子域收集:", style="#ADFF2F")
     except Exception as e:
         console.print("subfinder 运行失败！", style="bold red")
