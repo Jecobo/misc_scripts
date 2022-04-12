@@ -6,10 +6,9 @@ import time
 from rich.console import Console
 from rich.table import Column, Table
 
-console = Console()
-
 # banner生成函数
 def banner():
+    console = Console()
     msg = '''
        /$$     /$$                                                             /$$                          
       | $$    |__/                                                            | $$                          
@@ -23,62 +22,62 @@ def banner():
 
     console.print(msg, style="bold red")
     table = Table(show_header=True, header_style="bold magenta")
-    table.add_column("ABOUT", style="dim", width=30)
-    table.add_column("AUTHOR", style="dim", width=30)
+    table.add_column("ABOUT", style="dim", width=35)
+    table.add_column("AUTHOR", style="dim", width=25)
     table.add_column("PLUGINS", style="dim", width=30)
     help_table = Table(show_header=True, header_style="bold magenta")
     help_table.add_column("ID", style="dim", width=30)
     help_table.add_column("参数", style="dim", width=30)
     help_table.add_column("说明", style="dim", width=30)
     table.add_row(
-        "一款SRC漏洞挖掘辅助工具",
-        "Echocipher",
-        "OneForAll"
+        "我很懒老想着程序帮我完成一些事情",
+        "timerzz",
+        ""
     )
     table.add_row(
         "",
         "",
-        "Masscan"
+        ""
     )
     table.add_row(
         "",
         "",
-        "Nmap"
+        ""
     )
     table.add_row(
         "",
         "",
-        "Wafw00f"
+        ""
     )
     table.add_row(
         "",
         "",
-        "Crawlergo"
+        ""
     )
     table.add_row(
         "",
         "",
-        "Xray"
+        ""
     )
     help_table.add_row(
         "1",
-        "Subdomain_Collect",
-        "获取子域"
+        "auto info collect",
+        "自动化信息搜集"
     )
     help_table.add_row(
         "2",
-        "Port_Check",
-        "端口检测"
+        "auto vul scan",
+        "自动化漏扫"
     )
     help_table.add_row(
         "3",
-        "Waf_Check",
-        "WAF检测"
+        "all in",
+        "一把梭"
     )
     help_table.add_row(
         "4",
-        "Craw_To_Xray",
-        "爬虫爬取 + 漏洞探测 + 消息通知"
+        "confused",
+        "我很迷茫"
     )
     help_table.add_row(
         "5",
@@ -90,9 +89,9 @@ def banner():
         "Exit",
         "退出"
     )
+
     console.print(table)
-    console.print('参数说明', style="#ADFF2F")
     console.print(help_table)
 
 
-banner()
+# banner()
