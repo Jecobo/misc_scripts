@@ -3,4 +3,5 @@
 # @Email   : 2540373135@qq.com
 
 domain_path = "/root/fxxk_work/project/hw_guoneng_4_9/domains"
-monitor_sleep_time = 60
+monitor_sleep_time = 10
+result_sql_path = "./results/result.sqlite3"
