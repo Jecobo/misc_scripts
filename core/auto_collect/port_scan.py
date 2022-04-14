@@ -5,6 +5,7 @@ from core.sql_helper import SQL_helper
 from rich.console import Console
 import subprocess
 import nmap
+import json
 
 console = Console()
 
@@ -56,6 +57,7 @@ def shodan_port_check():
 
 
 def service_check(ip, port):
+    print(ip, port, "nmap scan...")
     url_list = []
     nm = nmap.PortScanner()
     ret = nm.scan(ip, port, arguments='-Pn,-sS')
@@ -65,7 +67,6 @@ def service_check(ip, port):
             url = 'https://' + ip + ':' + port
         else:
             url = 'http://' + ip + ':' + port
-
         return url
 
 
@@ -75,16 +76,33 @@ def masscan_port_check(ip):
     url_list = []
     results_list = []
     console.print('正在进行端口探测', style="#ADFF2F")
+    print(ip)
     # cmd = ['sudo', config.masscan_path, ip, '-p', config.masscan_port, '-oJ', config.masscan_file, '--rate', config.masscan_rate]
-    cmd = 'sudo ' + config.masscan_path + " " + ip + ' -p ' + config.masscan_port + ' -oJ ' + config.masscan_file + ' --rate '+ config.masscan_rate
+    # cmd = 'masscan ' + ip + ' -p ' + config.masscan_port + ' -oJ ' + config.masscan_file + ' --rate '+ config.masscan_rate
+    cmd = 'masscan ' + ip + ' -p 1-65535 -oJ masscan_test_res --rate 10000'
+
     rsp = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     while True:
         if rsp.poll() == None:    # poll() 返回none代表正在运行
             pass
         else:
             break
-    with open(config.masscan_file, 'r') as wr:
-        for line in json.loads(wr.read()):
+    print("finish...")
+    with open('masscan_test_res', 'r', encoding='utf-8', errors='igonre') as wr:
+        str0 = wr.read()
+        # print('str0',str0)
+        if len(str0) == 0:
+            return url_list
+
+        str1 = str0[:-4] + str0[-3:]    # win 和 lin 切片结果不一样
+        # print('str1', str1)
+        try:
+            json_data = json.loads(str1)
+            print(json_data)
+        except:
+            print('error json loads...')
+            return url_list
+        for line in json_data:
             ip = line['ip']
             port = line['ports'][0]['port']
             result_dict = {
@@ -92,20 +110,40 @@ def masscan_port_check(ip):
                 'port': port
             }
             tmp_list.append(result_dict)
-        if len(tmp_list) > config.port_num_max:     # 端口过多直接pass
+        if len(tmp_list) > 65535:     # 端口过多直接pass
             tmp_list.clear()
         else:
             results_list.extend(tmp_list)
         for result in results_list:
             ip = result['ip']
             port = str(result['port'])
-            url = service_check(ip, port)
-            if len(url) > 0:
+            url = service_check(ip, port)   # 没东西
+            if url:
                 url_list.append(url)
+                print(url)
         # todo 做探活
         return url_list
 
 
 def port_check():
-    # todo 调用端口扫描，单独调用，多线程会被ban，网卡不行吃不消
-    ...
+    # todo 调用端口扫描,多线程,单线程太慢
+    # 读取数据库ip，根据tag标签查找
+    ip_list_ = []
+    url_res_list = []
+    subdomain_all_info = SQL_helper.read_subdomain_sql()[:10]
+    print(subdomain_all_info)
+    for sub_tuple in subdomain_all_info:
+        ip = sub_tuple[2]
+        ip_list_.append(ip)
+    ip_list_ = list(set(ip_list_))
+
+    print(len(ip_list_), ip_list_)
+
+    for ip in ip_list_:
+        if ip == "#":
+            continue
+        tmp_list = masscan_port_check(ip)
+        url_res_list.extend(tmp_list)
+
+    print(len(url_res_list))
+    print(url_res_list)
