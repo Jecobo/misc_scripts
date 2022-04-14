@@ -13,6 +13,7 @@ from core.sql_helper import SQL_helper
 def main():
     console = Console()
     banner.banner()
+
     while True:
         console.print('请输入要执行的参数ID：[bold cyan]1-6[/bold cyan]', style="#ADFF2F")
         args = input('> ')

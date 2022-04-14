@@ -23,6 +23,7 @@ def subdomain_status_check():
     console.print("开始子域名入库……")
     # 入库完事后改掉文件名，前面加一个used
     try:
+        tag = input('subdomain tag > ')
         sub_file_name = file_op.get_file_from_dir('./res/subdomain')
         target_file = ''
         for sub_file in sub_file_name:
@@ -34,7 +35,7 @@ def subdomain_status_check():
         with open(target_file, 'r', encoding='utf-8') as f:
             subdomains = f.readlines()
             print(subdomains)
-        SQL_helper.insert_subdomain_sql(subdomains)
+        SQL_helper.insert_subdomain_sql(subdomains, tag)
         os.rename(target_file, './res/subdomain/used_' + target_file.split('/')[-1])
         console.log("子域名入库成功……")
     except Exception as e:
