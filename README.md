@@ -12,3 +12,7 @@ some scripts ，I used...
   - 备份扫描
   
 
+______________________________________
+error   red
+warring   orgine
+info    bule
