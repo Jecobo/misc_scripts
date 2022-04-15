@@ -1,6 +1,6 @@
 from socket import gethostbyname_ex
 from queue import Queue
-from threading import Thread
+from threading import Thread, Lock
 from core.sql_helper import SQL_helper
 from rich.console import Console
 import subprocess
@@ -8,6 +8,7 @@ import nmap
 import json
 
 console = Console()
+lock = Lock()
 
 
 # 数据库域名转ip，检查cdn，插入数据库
@@ -56,68 +57,88 @@ def shodan_port_check():
     ...
 
 
-def service_check(ip, port):
-    print(ip, port, "nmap scan...")
-    url_list = []
-    nm = nmap.PortScanner()
-    ret = nm.scan(ip, port, arguments='-Pn,-sS')
-    service_name = ret['scan'][ip]['tcp'][int(port)]['name']
-    if 'http' in service_name or service_name == 'sun-answerbook':
-        if service_name == 'https' or service_name == 'https-alt':
-            url = 'https://' + ip + ':' + port
-        else:
-            url = 'http://' + ip + ':' + port
-        return url
+class MulMasscan(Thread):
+    def __init__(self, domain_q, t_id):
+        super(MulMasscan, self).__init__()
+        self._domain_q = domain_q
+        self._tid = t_id
 
+    def run(self):
+        # 启动端口探测，写文件加锁，会变得很慢?
+        while self._domain_q.empty() is not True:
+            _ip = self._domain_q.get()
+            try:
+                urls_list_to_db = MulMasscan.masscan_port_check(_ip, self._tid)
+                # 插入数据库
+                lock.acquire()
+                SQL_helper.url_table_insert(urls_list_to_db, "test")
+                lock.release()
+            except:
+                ...
+            finally:
+                self._domain_q.task_done()
 
-# masscan端口检测函数
-def masscan_port_check(ip):
-    tmp_list = []
-    url_list = []
-    results_list = []
-    console.print('正在进行端口探测', style="#ADFF2F")
-    print(ip)
-    # cmd = ['sudo', config.masscan_path, ip, '-p', config.masscan_port, '-oJ', config.masscan_file, '--rate', config.masscan_rate]
-    # cmd = 'masscan ' + ip + ' -p ' + config.masscan_port + ' -oJ ' + config.masscan_file + ' --rate '+ config.masscan_rate
-    cmd = 'masscan ' + ip + ' -p 1-65535 -oJ masscan_test_res --rate 10000'
+    @staticmethod
+    def service_check(ip, port):
+        print(ip, port, "nmap scan...")
+        nm = nmap.PortScanner()
+        ret = nm.scan(ip, port, arguments='-Pn,-sS')
+        service_name = ret['scan'][ip]['tcp'][int(port)]['name']
+        if 'http' in service_name or service_name == 'sun-answerbook':
+            if service_name == 'https' or service_name == 'https-alt':
+                url = 'https://' + ip + ':' + port
+            else:
+                url = 'http://' + ip + ':' + port
+            return url
 
-    rsp = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-    while True:
-        if rsp.poll() == None:    # poll() 返回none代表正在运行
-            pass
-        else:
-            break
-    print("finish...")
-    with open('masscan_test_res', 'r', encoding='utf-8', errors='igonre') as wr:
-        str0 = wr.read()
-        # print('str0',str0)
-        if len(str0) == 0:
-            return url_list
+    @staticmethod
+    def masscan_port_check(ip, tid):
+        tmp_list = []
+        url_list = []
+        results_list = []
+        console.print('正在进行端口探测', style="#ADFF2F")
+        print(ip)
+        # cmd = ['sudo', config.masscan_path, ip, '-p', config.masscan_port, '-oJ', config.masscan_file, '--rate', config.masscan_rate]
+        # cmd = 'masscan ' + ip + ' -p ' + config.masscan_port + ' -oJ ' + config.masscan_file + ' --rate '+ config.masscan_rate
+        cmd = 'masscan ' + ip + ' -p 1-65535 -oJ ./masscanRes/' + tid + '_res --rate 10000'  # 每个现场单独去操作自己文件
 
-        str1 = str0[:-4] + str0[-3:]    # win 和 lin 切片结果不一样
-        # print('str1', str1)
-        try:
-            json_data = json.loads(str1)
-            print(json_data)
-        except:
-            print('error json loads...')
-            return url_list
-        for line in json_data:
-            ip = line['ip']
-            port = line['ports'][0]['port']
-            result_dict = {
-                'ip': ip,
-                'port': port
-            }
-            tmp_list.append(result_dict)
-        if len(tmp_list) > 65535:     # 端口过多直接pass
-            tmp_list.clear()
-        else:
-            results_list.extend(tmp_list)
+        rsp = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        while True:
+            if rsp.poll() == None:  # poll() 返回none代表正在运行
+                pass
+            else:
+                break
+
+        with open('./masscanRes/'+tid+'_res', 'r', encoding='utf-8', errors='igonre') as wr:
+            str0 = wr.read()
+            # print('str0',str0)
+            if len(str0) == 0:
+                return url_list
+            str1 = str0[:-4] + str0[-3:]  # win 和 lin 切片结果不一样
+            # print('str1', str1)
+            try:
+                json_data = json.loads(str1)
+                print(json_data)
+            except:
+                print('error json loads...')
+                return url_list
+            for line in json_data:
+                ip = line['ip']
+                port = line['ports'][0]['port']
+                result_dict = {
+                    'ip': ip,
+                    'port': port
+                }
+                tmp_list.append(result_dict)
+            if len(tmp_list) > 65535:  # 端口过多直接pass
+                tmp_list.clear()
+            else:
+                results_list.extend(tmp_list)
+
         for result in results_list:
             ip = result['ip']
             port = str(result['port'])
-            url = service_check(ip, port)   # 没东西
+            url = MulMasscan.service_check(ip, port)  # 没东西
             if url:
                 url_list.append(url)
                 print(url)
@@ -126,24 +147,27 @@ def masscan_port_check(ip):
 
 
 def port_check():
-    # todo 调用端口扫描,多线程,单线程太慢
-    # 读取数据库ip，根据tag标签查找
     ip_list_ = []
-    url_res_list = []
-    subdomain_all_info = SQL_helper.read_subdomain_sql()[:10]
-    print(subdomain_all_info)
+    ip_queue = Queue()
+
+    subdomain_all_info = SQL_helper.read_subdomain_sql()
     for sub_tuple in subdomain_all_info:
         ip = sub_tuple[2]
         ip_list_.append(ip)
+
     ip_list_ = list(set(ip_list_))
-
-    print(len(ip_list_), ip_list_)
-
     for ip in ip_list_:
         if ip == "#":
             continue
-        tmp_list = masscan_port_check(ip)
-        url_res_list.extend(tmp_list)
+        # 加入队列
+        ip_queue.put(ip)
 
-    print(len(url_res_list))
-    print(url_res_list)
+    # 多线程启动
+    for i in range(20):
+        t = MulMasscan(ip_queue, str(i))
+        t.daemon = True
+        t.start()
+    ip_queue.join()
+
+
+port_check()

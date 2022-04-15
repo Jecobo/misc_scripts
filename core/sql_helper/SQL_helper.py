@@ -6,10 +6,57 @@ from rich.console import Console
 console = Console()
 
 
-# 存放存活url的表  id url time tag
+# url表  id url isAlive time url_tag
+def url_table_create():
+    conn = sqlite3.connect("test.db")
+    c = conn.cursor()
+    try:
+        c.execute(
+            '''
+                CREATE TABLE IF NOT EXISTS URLS(
+                    ID INTEGER PRIMARY KEY,
+                    URL TEXT NOT NULL,
+                    isAlive TEXT DEFAULT "#",
+                    URL_TIME TEXT NOT NULL,
+                    URL_TAG TEXT NOT NULL
+                );
+            '''
+        )
+        conn.commit()
+        # print("xssdsd")
+    except:
+        # print("dsada")
+        ...
+
+# url 插入数据库
+def url_table_insert(urls, url_tag):
+    url_conn = sqlite3.connect("test.db")
+    url_c = url_conn.cursor()
+    for url in urls:
+        url = url.strip()
+        now_time = time.strftime("%Y_%m_%d_%H_%M_%S", time.localtime())
+        try:
+            sql = '''
+                INSERT INTO URLS (URL, URL_TIME, URL_TAG) VALUES ('%s', '%s', '%s')
+            ''' % (url, now_time, url_tag)
+            url_c.execute(sql)
+            url_conn.commit()
+        except:
+            ...
+
+    url_conn.close()
 
 
-
+def url_table_read():
+    url_conn = sqlite3.connect("test.db")
+    url_c = url_conn.cursor()
+    try:
+        urls = url_c.execute('select * from URLS').fetchall()
+        return urls
+    except:
+        ...
+    finally:
+        url_conn.close()
 
 # 子域数据表检查
 def subdomain_sql_check():
@@ -476,6 +523,8 @@ domain_li = [
     'www.chnenergy.com.cn',
     'mail.chnenergy.com.cn',
 ]
+
+# url_table_create()
 # insert_subdomain_sql(domain_li, "test")
 # print(read_subdomain_sql())
 # update_subdomain_sql("11111", "s1111", '3')
