@@ -15,7 +15,8 @@ def read_file_data():
             data = f.readlines()
         for line in data:
             data_list.append(line.strip())
-        print(data_list)
+
+        # print(data_list)
         return data_list
     except FileNotFoundError as e:
         console.print('目标文件读取异常，请检查文件是否存在', style="bold red")

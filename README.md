@@ -1,18 +1,25 @@
 # misc_scripts
 some scripts ，I used...
 </br>
-<h2>功能概述</h2>
-- 密码/url命中统计
-- 自动化漏扫
-  - nuclei
-- 自动化信息搜集
-  - ip
-  - domain
-  - url
-  - 备份扫描
-  
+## functions
+- 密码/url命中统计</br>
+- 自动化漏扫</br>
+  - nuclei</br>
+- 自动化信息搜集</br>
+  - ip</br>
+  - domain</br>
+  - url</br>
+  - 备份扫描</br>
 
-______________________________________
-error   red
-warring   orgine
-info    bule
+### note
+error   red     [bold red]test[/bold red] </br>
+warring   yellow   [bold yellow]test[/bold yellow]</br>
+info    blue    [bold blue]test[/bold blue]</br>
+
+### finish
+子域名探测    [y]   </br>
+端口扫描      [y]</br>
+url探活      [y]</br>
+
+### todo
+...

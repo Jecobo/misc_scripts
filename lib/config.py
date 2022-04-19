@@ -2,7 +2,11 @@
 # @Author  : Timer Zz
 # @Email   : 2540373135@qq.com
 
-domain_path = "/root/fxxk_work/project/hw_guoneng_4_9/domains"
+domain_path = "xxxx"
 monitor_sleep_time = 10
-result_sql_path = "./results/result.sqlite3"
+result_sql_path = "./db/result.db"
+
+subdomain_tag = 'test_subdomain'
+url_tag = 'test_url'
+
 SHODAN_API_KEY = "xxxxxx"

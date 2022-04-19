@@ -12,8 +12,8 @@ now_time = time.strftime("%Y-%m-%d-%H_%M_%S", time.localtime())
 
 def run_subfinder():
     console = Console()
-    cmdx = 'nohup subfinder -silent -dL ' + config.domain_path + ' -o ./res/subdomain/' + now_time + ' 2>&1 &'
-    print(cmdx)
+    cmdx = 'nohup subfinder -silent -dL ' + config.domain_path + ' -o ./tmp/subdomain/' + now_time + ' 2>&1'
+    console.print("[bold blue][info] exec: " + cmdx + '[/bold blue]')
     try:
         proc = Popen(
             cmdx,
@@ -22,6 +22,6 @@ def run_subfinder():
             stderr=PIPE,  # 标准错误，保存到管道
             shell=True
         )
-        console.print("正在进行子域收集:", style="#ADFF2F")
+        # console.print("正在进行子域收集:", style="#ADFF2F")
     except Exception as e:
-        console.print("subfinder 运行失败！", style="bold red")
+        console.print("[error] subfinder 运行失败!", style="bold red")

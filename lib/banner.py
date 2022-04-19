@@ -6,6 +6,7 @@ import time
 from rich.console import Console
 from rich.table import Column, Table
 
+
 # banner生成函数
 def banner():
     console = Console()
@@ -81,8 +82,8 @@ def banner():
     )
     help_table.add_row(
         "5",
-        "View",
-        "查看"
+        "export",
+        "导出"
     )
     help_table.add_row(
         "6",

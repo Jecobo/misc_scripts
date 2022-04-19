@@ -6,9 +6,11 @@ from rich.console import Console
 import subprocess
 import nmap
 import json
+from lib import config
 
 console = Console()
 lock = Lock()
+url_tag = config.url_tag
 
 
 # 数据库域名转ip，检查cdn，插入数据库
@@ -24,7 +26,7 @@ class Domain2IP(Thread):
                 _res = gethostbyname_ex(domain)
                 # print(f'domain:{_res[0]} , aliases:{_res[1]} , ip list:{_res[2]}')
                 if len(_res[2]) != 1:
-                    console.log(domain + 'cdn checked...')
+                    console.print('[warning] ' + domain + ' cdn checked...', style='bold yellow')
                     # self._res_list.append([_res[0], ','.join(_res[1]), ','.join(_res[2])])
                     SQL_helper.update_subdomain_sql("cdn_checked", 'True', domain)
                 else:
@@ -32,9 +34,9 @@ class Domain2IP(Thread):
                     # 更新ip，cdn字段
                     SQL_helper.update_subdomain_sql(_res[2][0], 'False', domain)
             except Exception as e:
-                console.log("[error] 域名解析失败，不存活!")
+                console.print("[warning]" + domain + " 解析失败，不存活!", style='bold yellow')
             finally:
-                self._domain_queue.task_done()     #
+                self._domain_queue.task_done()
 
 
 def ip_domain_cdn():
@@ -71,16 +73,16 @@ class MulMasscan(Thread):
                 urls_list_to_db = MulMasscan.masscan_port_check(_ip, self._tid)
                 # 插入数据库
                 lock.acquire()
-                SQL_helper.url_table_insert(urls_list_to_db, "test")
+                SQL_helper.url_table_insert(urls_list_to_db, url_tag)
                 lock.release()
             except:
-                ...
+                console.print('[error] masscan 端口扫描失败!', style='bold red')
             finally:
                 self._domain_q.task_done()
 
     @staticmethod
     def service_check(ip, port):
-        print(ip, port, "nmap scan...")
+        console.print("[info] " + "nmap scanning: " + ip + ':' + port, style='bold blue')
         nm = nmap.PortScanner()
         ret = nm.scan(ip, port, arguments='-Pn,-sS')
         service_name = ret['scan'][ip]['tcp'][int(port)]['name']
@@ -96,11 +98,8 @@ class MulMasscan(Thread):
         tmp_list = []
         url_list = []
         results_list = []
-        console.print('正在进行端口探测', style="#ADFF2F")
-        print(ip)
-        # cmd = ['sudo', config.masscan_path, ip, '-p', config.masscan_port, '-oJ', config.masscan_file, '--rate', config.masscan_rate]
-        # cmd = 'masscan ' + ip + ' -p ' + config.masscan_port + ' -oJ ' + config.masscan_file + ' --rate '+ config.masscan_rate
-        cmd = 'masscan ' + ip + ' -p 1-65535 -oJ ./masscanRes/' + tid + '_res --rate 10000'  # 每个现场单独去操作自己文件
+        console.print('[info] masscan正在进行端口探测...', style="bold blue")
+        cmd = 'masscan ' + ip + ' -p 1-65535 -oJ ./tmp/masscanRes/' + tid + '_res --rate 10000'  # 每个线程单独去操作自己文件, 服务器卡顿
 
         rsp = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         while True:
@@ -109,7 +108,7 @@ class MulMasscan(Thread):
             else:
                 break
 
-        with open('./masscanRes/'+tid+'_res', 'r', encoding='utf-8', errors='igonre') as wr:
+        with open('./tmp/masscanRes/'+tid+'_res', 'r', encoding='utf-8') as wr:
             str0 = wr.read()
             # print('str0',str0)
             if len(str0) == 0:
@@ -118,9 +117,8 @@ class MulMasscan(Thread):
             # print('str1', str1)
             try:
                 json_data = json.loads(str1)
-                print(json_data)
             except:
-                print('error json loads...')
+                console.print('[error] something wrong for json loads!', style='bold red')
                 return url_list
             for line in json_data:
                 ip = line['ip']
@@ -141,7 +139,7 @@ class MulMasscan(Thread):
             url = MulMasscan.service_check(ip, port)  # 没东西
             if url:
                 url_list.append(url)
-                print(url)
+                console.print('[info] get a url: ' + url, style='bold blue')
         # todo 做探活
         return url_list
 
@@ -150,7 +148,7 @@ def port_check():
     ip_list_ = []
     ip_queue = Queue()
 
-    subdomain_all_info = SQL_helper.read_subdomain_sql()
+    subdomain_all_info = SQL_helper.read_subdomain_sql()   # subdomain 表信息
     for sub_tuple in subdomain_all_info:
         ip = sub_tuple[2]
         ip_list_.append(ip)
@@ -170,4 +168,4 @@ def port_check():
     ip_queue.join()
 
 
-port_check()
+# port_check()
